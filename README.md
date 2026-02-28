@@ -42,10 +42,33 @@ cd ~/Arduino/libraries/
 git clone https://github.com/hiberblsm/arduino-uno-gsm-shield.git
 ```
 
+## 🌐 Test Sunucusu
+
+Tüm sketch'ler **HiberSoft Test Sunucusu** ile çalışır:
+
+| Protokol | Sunucu | Port |
+|:--------:|:------:|:----:|
+| HTTP     | `test.hibersoft.com.tr` | `2884` |
+| TCP      | `test.hibersoft.com.tr` | `2885` |
+| UDP      | `test.hibersoft.com.tr` | `2886` |
+| MQTT     | `test.hibersoft.com.tr` | `2887` |
+
+### Token Alma
+HTTP, TCP ve UDP testleri için önce token almak gerekir:
+```bash
+curl -s -X POST http://test.hibersoft.com.tr:2884/token \
+  -H "x-api-key: PUBLIC_TEST_2026_ESP_ARDUINO"
+```
+
+### MQTT Kimlik Bilgileri
+- Username: `testuser`
+- Password: `PUBLIC_MQTT_2026_PASS`
+- Topic prefix: `test/` veya `devices/`
+
 ## 🚀 Örnek Sketch'ler
 
 ### 01 - Serial Test
-Modem temel fonksiyonlarını test eder: AT yanıtı, IMEI, IMSI, sinyal gücü, SIM durumu, operatör.
+Modem temel fonksiyonlarını test eder: AT yanıtı, IMEI, IMSI, sinyal gücü, SIM durumu, operatör. Ayrıca interaktif AT komut terminali.
 
 ```cpp
 #include <SIM800C.h>
@@ -62,20 +85,20 @@ void setup() {
 ```
 
 ### 02 - HTTP Test
-GPRS üzerinden HTTP GET ve POST istekleri.
+Token alma → POST /ingest ile veri gönderme → GET /messages ile mesajları görüntüleme.
 
 ### 03 - TCP Test
-TCP soket bağlantı, veri gönderme/alma.
+Token alma → TCP soket bağlantı → JSON veri gönderme (`\n` ile biten satırlar).
 
 ### 04 - UDP Test
-UDP veri gönderim, NTP zaman sorgusu.
+Token alma → UDP soket → 3 farklı JSON paket gönderimi (sensör, durum, konum).
 
 ### 05 - MQTT Test
-MQTT broker'a bağlanma, publish/subscribe, gelen mesaj okuma.
+Broker'a bağlanma → Subscribe → Periyodik publish (30sn) → Gelen komut okuma → Auto-reconnect.
 
-## ⚙️ Ayarlar
+## ⚙️ APN Ayarları
 
-Her sketch'in başında APN ve test sunucusu ayarları bulunur:
+Her sketch'in başında APN ayarları bulunur:
 
 ```cpp
 const char* APN  = "internet";       // Turkcell
