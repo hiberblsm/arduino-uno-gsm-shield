@@ -121,6 +121,64 @@ void SIM800C::clearBuffer() {
     }
 }
 
+// Heap kullanmadan +HTTPACTION: URC'yi bekle ve HTTP kodu doandur
+int SIM800C::waitHttpActionCode(uint32_t timeoutMs) {
+    char buf[64] = {0};
+    uint8_t pos = 0;
+    unsigned long start = millis();
+
+    while (millis() - start < timeoutMs) {
+        while (_serial->available()) {
+            char c = _serial->read();
+            // Sliding window: tam oldugunda bas1 kapat
+            if (pos >= 63) {
+                memmove(buf, buf + 1, 62);
+                pos = 62;
+            }
+            buf[pos++] = c;
+            buf[pos]   = '\0';
+
+            if (c == '\n' && pos > 15) {
+                char *ha = strstr(buf, "+HTTPACTION:");
+                if (ha) {
+                    char *c1 = strchr(ha, ',');
+                    if (c1) {
+                        char *c2 = strchr(c1 + 1, ',');
+                        if (c2) {
+                            if (_debugEnabled) {
+                                Serial.print(F("[HTTP] code="));
+                                Serial.println(atoi(c1 + 1));
+                            }
+                            return atoi(c1 + 1);
+                        }
+                    }
+                }
+                // Yeni satir: window'u "+HTTPACTION:" oncesine temizle
+                if (!strstr(buf, "+HTTPACT")) { pos = 0; buf[0] = '\0'; }
+            }
+        }
+    }
+    return 0;  // timeout
+}
+
+// Trigger stringi gelene kadar (veya timeout dolana kadar) seri portu oku
+String SIM800C::waitForData(const String &trigger, uint32_t timeoutMs) {
+    String response = "";
+    unsigned long start = millis();
+    while (millis() - start < timeoutMs) {
+        while (_serial->available()) {
+            char c = _serial->read();
+            response += c;
+        }
+        if (response.indexOf(trigger) >= 0) break;
+    }
+    if (_debugEnabled) {
+        Serial.print(F("[WAIT] "));
+        Serial.println(response);
+    }
+    return response;
+}
+
 // ==================== MODEM BİLGİLERİ ====================
 
 String SIM800C::getIMEI() {

@@ -58,6 +58,8 @@ public:
     String sendAT(const String &cmd, uint32_t timeoutMs = AT_TIMEOUT);
     bool sendATExpect(const String &cmd, const String &expected, uint32_t timeoutMs = AT_TIMEOUT);
     bool waitForResponse(const String &expected, uint32_t timeoutMs = AT_TIMEOUT);
+    String waitForData(const String &trigger, uint32_t timeoutMs = AT_TIMEOUT);  // trigger gelene kadar oku
+    int  waitHttpActionCode(uint32_t timeoutMs = HTTP_TIMEOUT); // heap-free URC parser
     void clearBuffer();
 
     // Modem bilgileri
