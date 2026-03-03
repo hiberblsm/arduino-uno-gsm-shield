@@ -44,7 +44,10 @@ git clone https://github.com/hiberblsm/arduino-uno-gsm-shield.git
 
 ## 🌐 Test Sunucusu
 
-Tüm sketch'ler **HiberSoft Test Sunucusu** ile çalışır:
+> 📖 **Tam dokümantasyon & diğer platformlar (ESP32/ESP8266):**
+> [github.com/hiberblsm/esp-arduino-test-server-readme](https://github.com/hiberblsm/esp-arduino-test-server-readme)
+
+Tüm sketch'ler **Hiber Bilişim Public Test Sunucusu** ile çalışır. Bu sunucu ESP32, ESP8266 ve Arduino tabanlı IoT cihazlar için **ücretsiz ve herkese açık** bir test ortamıdır — kayıt gerektirmez.
 
 | Protokol | Sunucu | Port |
 |:--------:|:------:|:----:|
@@ -53,17 +56,66 @@ Tüm sketch'ler **HiberSoft Test Sunucusu** ile çalışır:
 | UDP      | `test.hibersoft.com.tr` | `2886` |
 | MQTT     | `test.hibersoft.com.tr` | `2887` |
 
+### Test Akışı
+
+1. `POST /token` → Geçici token al (1 saat geçerli)
+2. Token ile HTTP / TCP / UDP üzerinden veri gönder
+3. `GET /messages` ile gönderilen mesajları doğrula
+
 ### Token Alma
-HTTP, TCP ve UDP testleri için önce token almak gerekir:
 ```bash
-curl -s -X POST http://test.hibersoft.com.tr:2884/token \
-  -H "x-api-key: PUBLIC_TEST_2026_ESP_ARDUINO"
+curl -s -X POST http://test.hibersoft.com.tr:2884/token
+```
+Örnek cevap:
+```json
+{
+  "ok": true,
+  "clientId": "c_xxxxxxxxxxxxxxxx",
+  "token": "<TEMP_TOKEN>",
+  "expiresAt": "2026-03-03T12:00:00.000Z",
+  "ttlSec": 3600
+}
+```
+
+### HTTP Test (curl)
+```bash
+# Veri gönder
+curl -s -X POST http://test.hibersoft.com.tr:2884/ingest \
+  -H "content-type: application/json" \
+  -H "x-api-key: <TEMP_TOKEN>" \
+  -d '{"deviceId":"arduino-uno","data":{"temp":24.5}}'
+
+# Mesajları listele
+curl -s http://test.hibersoft.com.tr:2884/messages \
+  -H "x-api-key: <TEMP_TOKEN>"
+```
+
+### TCP Test
+```bash
+printf '{"token":"<TEMP_TOKEN>","deviceId":"arduino-tcp","data":{"val":1}}\n' \
+  | nc test.hibersoft.com.tr 2885
+```
+
+### UDP Test
+```bash
+echo -n '{"token":"<TEMP_TOKEN>","deviceId":"arduino-udp","data":{"val":1}}' \
+  | nc -u -w1 test.hibersoft.com.tr 2886
 ```
 
 ### MQTT Kimlik Bilgileri
-- Username: `testuser`
-- Password: `PUBLIC_MQTT_2026_PASS`
-- Topic prefix: `test/` veya `devices/`
+```
+Host    : test.hibersoft.com.tr
+Port    : 2887
+Username: testuser
+Password: PUBLIC_MQTT_2026_PASS
+Topic   : test/<cihaz-id>  veya  devices/<cihaz-id>
+```
+```bash
+mosquitto_pub -h test.hibersoft.com.tr -p 2887 \
+  -u "testuser" -P "PUBLIC_MQTT_2026_PASS" \
+  -t "test/arduino-uno" \
+  -m '{"deviceId":"arduino-uno","data":{"temp":24.5}}'
+```
 
 ## 🚀 Örnek Sketch'ler
 
