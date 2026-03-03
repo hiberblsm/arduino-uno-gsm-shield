@@ -287,16 +287,13 @@ bool SIM800C::isGPRSConnected() {
 
 String SIM800C::getLocalIP() {
     String resp = sendAT("AT+CIFSR", 3000);
-    // Yanıtta IP adresi bulunur
     resp.trim();
+    // Yanit birden fazla satir iceriyorsa son satirı al
     int lastNewline = resp.lastIndexOf('\n');
-    if (lastNewline >= 0) {
-        String ip = resp.substring(lastNewline + 1);
-        ip.trim();
-        // IP formatı kontrolü
-        if (ip.indexOf('.') > 0 && ip.indexOf("ERROR") < 0) {
-            return ip;
-        }
+    String ip = (lastNewline >= 0) ? resp.substring(lastNewline + 1) : resp;
+    ip.trim();
+    if (ip.indexOf('.') > 0 && ip.indexOf("ERROR") < 0) {
+        return ip;
     }
     return "";
 }

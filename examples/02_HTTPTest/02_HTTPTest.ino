@@ -153,6 +153,14 @@ void setup() {
     Serial.println(F("[PASS] Modem hazir"));
     gsm.setDebug(false);  // HTTP testinde debug kapat, SoftwareSerial bufferini koru
 
+    // Takili kalabilecek her seyi temizle
+    Serial.println(F("[INIT] Onceki oturum temizleniyor..."));
+    gsm.sendAT("AT+HTTPTERM", 2000);
+    gsm.sendAT("AT+CIPSHUT",  5000);
+    gsm.sendAT("AT+SAPBR=0,1", 5000);
+    delay(1000);
+    Serial.println(F("[INIT] Temizlendi"));
+
     // [2] Network
     Serial.println(F("[2/6] Network bekleniyor..."));
     for (int i = 0; i < 30 && !gsm.isRegistered(); i++) { delay(1000); Serial.print('.'); }
