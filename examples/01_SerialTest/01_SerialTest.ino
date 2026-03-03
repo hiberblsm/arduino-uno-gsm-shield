@@ -76,7 +76,8 @@ void setup() {
     if (simStatus == "READY") {
         Serial.println(F("[PASS] SIM kart hazir"));
     } else {
-        Serial.println(F("[WARN] SIM kart durumu: ") + simStatus);
+        Serial.print(F("[WARN] SIM kart durumu: "));
+        Serial.println(simStatus);
     }
     Serial.println();
 
