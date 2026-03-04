@@ -131,6 +131,8 @@ private:
     bool _startTCP(const String &host, uint16_t port);
     void _sendMQTTPacket(uint8_t *packet, size_t len);
     void _encodeRemainingLength(uint8_t *buf, size_t &idx, uint32_t len);
+    // Heap kullanmadan serial'i tara (sabit 64 byte sliding window)
+    bool _scanFor(const char *trigger, uint32_t timeoutMs);
 };
 
 #endif // SIM800C_H

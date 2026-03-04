@@ -27,7 +27,7 @@
 // ============================================================
 //  YAPILANDIRMA
 // ============================================================
-#define TEST_PHONE_NUMBER  "+905XXXXXXXXX"   // <-- kendi numaranı yaz!
+#define TEST_PHONE_NUMBER  "+905468422222"
 // ============================================================
 
 SIM800C gsm;
@@ -46,16 +46,20 @@ void setup() {
     // ----------------------------------------------------------
     Serial.println(F("\n[1/6] Modem baslatiliyor..."));
 
-    gsm.hardReset();   // güç çevrimli hard reset
-    delay(3000);
+    // hardReset() → powerOff → powerOn → begin()
+    // begin() icinde 'SMS Ready' URC bekleniyor (15sn)
+    // Ayri begin() cagirma — iki kez cagirmak 'SMS Ready' URC'yi yer
+    gsm.hardReset();
 
-    if (!gsm.begin()) {
-        Serial.println(F("[FAIL] Modem baslatilamadi!"));
-        while (1);
+    // CPIN kontrolu — SIM hazir mi?
+    String simStatus = "UNKNOWN";
+    for (int i = 0; i < 10; i++) {
+        simStatus = gsm.getSIMStatus();
+        if (simStatus == "READY") break;
+        Serial.print(F("  SIM bekleniyor: "));
+        Serial.println(simStatus);
+        delay(1000);
     }
-
-    // SIM kart kontrol
-    String simStatus = gsm.getSIMStatus();
     if (simStatus != "READY") {
         Serial.print(F("[FAIL] SIM kart hatasi: "));
         Serial.println(simStatus);

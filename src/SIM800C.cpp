@@ -28,6 +28,10 @@ bool SIM800C::begin(long baud) {
     for (int i = 0; i < 5; i++) {
         if (sendATExpect("AT", "OK", 2000)) {
             debugPrint(F("Modem hazir!"));
+            // Askida kalan CMGS prompt'u varsa ESC ile iptal et
+            _serial->write(0x1B);
+            delay(200);
+            clearBuffer();
             // Echo kapat
             sendAT("ATE0");
             // Metin modu SMS
@@ -60,7 +64,7 @@ void SIM800C::hardReset() {
     powerOff();
     delay(2000);
     powerOn();
-    delay(5000);
+    delay(5000);  // modem tam boot etsin
     begin();
 }
 
@@ -750,12 +754,36 @@ bool SIM800C::mqttDisconnect() {
 
 // ==================== SMS ====================
 
-bool SIM800C::smsSend(const String &number, const String &message) {
-    sendAT("AT+CMGF=1");   // metin modu (begin() zaten ayarlar, güvenlik için tekrar)
+// Heap-free sliding window tarayıcı
+bool SIM800C::_scanFor(const char *trigger, uint32_t timeoutMs) {
+    char buf[64];
+    memset(buf, 0, sizeof(buf));
+    uint8_t pos = 0;
+    size_t tlen = strlen(trigger);
+    unsigned long start = millis();
 
-    String cmd = "AT+CMGS=\"";
-    cmd += number;
-    cmd += "\"";
+    while (millis() - start < timeoutMs) {
+        while (_serial->available()) {
+            char c = _serial->read();
+            if (_debugEnabled) Serial.write(c);
+            if (pos >= 63) {
+                memmove(buf, buf + 1, 62);
+                pos = 62;
+            }
+            buf[pos++] = c;
+            buf[pos]   = '\0';
+            if (strstr(buf, trigger)) return true;
+        }
+    }
+    return false;
+}
+
+bool SIM800C::smsSend(const String &number, const String &message) {
+    sendAT("AT+CMGF=1");
+
+    // AT+CMGS="numara"
+    char cmd[40];
+    snprintf(cmd, sizeof(cmd), "AT+CMGS=\"%s\"", number.c_str());
 
     String resp = sendAT(cmd, 5000);
     if (resp.indexOf('>') < 0) {
@@ -764,13 +792,17 @@ bool SIM800C::smsSend(const String &number, const String &message) {
     }
 
     _serial->print(message);
-    _serial->write(0x1A);  // Ctrl+Z - gönder
+    _serial->write(0x1A);  // Ctrl+Z
 
-    resp = waitForData("+CMGS:", 30000);
-    if (resp.indexOf("+CMGS:") >= 0) {
+    // +CMGS: yaniti — heap-free tarayici ile bekle
+    if (_scanFor("+CMGS:", 30000)) {
         debugPrint(F("SMS gonderildi"));
         return true;
     }
+    // Hata durumunda modem'i temizle
+    _serial->write(0x1B);  // ESC
+    delay(200);
+    clearBuffer();
     debugPrint(F("SMS: gonderim hatasi"));
     return false;
 }
