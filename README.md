@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GSM](https://img.shields.io/badge/Module-SIM800C-green)](https://www.simcom.com/)
 
-Arduino UNO üzerinde SIM800C GSM modülü ile **Serial, HTTP, TCP, UDP ve MQTT** protokollerini test etmek için hazır kütüphane ve örnek sketch'ler.
+Arduino UNO üzerinde SIM800C GSM modülü ile **Serial, HTTP, TCP, UDP, MQTT ve SMS** protokollerini test etmek için hazır kütüphane ve örnek sketch'ler.
 
 ## 📋 Özellikler
 
@@ -15,6 +15,7 @@ Arduino UNO üzerinde SIM800C GSM modülü ile **Serial, HTTP, TCP, UDP ve MQTT*
 - ✅ TCP soket bağlantı
 - ✅ UDP veri gönderim/alım
 - ✅ MQTT publish / subscribe (raw TCP üzerinden)
+- ✅ SMS gönderme, alma, okuma, listeleme ve silme
 - ✅ Debug modu (Serial Monitor)
 
 ## 🔌 Pin Bağlantıları
@@ -148,6 +149,69 @@ Token alma → UDP soket → 3 farklı JSON paket gönderimi (sensör, durum, ko
 ### 05 - MQTT Test
 Broker'a bağlanma → Subscribe → Periyodik publish (30sn) → Gelen komut okuma → Auto-reconnect.
 
+### 06 - SMS Test
+
+SMS göndermek için tek yapmanız gereken, sketch'in başındaki telefon numarasını kendi numaranızla değiştirmektir:
+
+```cpp
+#define TEST_PHONE_NUMBER  "+905XXXXXXXXX"  // buraya kendi numaranızı yazın
+```
+
+Sketch şu adımları otomatik olarak gerçekleştirir:
+
+| Adım | İşlem | Açıklama |
+|:----:|:-----:|:---------|
+| 1 | Modem Başlat | SIM kart ve şebeke bağlantısı kontrol edilir |
+| 2 | SMS Gönder | Belirtilen numaraya test SMS'i gönderilir |
+| 3 | SMS Listele | SIM karttaki tüm mesajlar listelenir |
+| 4 | SMS Oku | 1 numaralı mesaj ekrana yazdırılır |
+| 5 | Gelen SMS Bekle | 30 saniye içinde gelen SMS otomatik yakalanır |
+| 6 | SMS Sil | SIM karttaki tüm mesajlar temizlenir |
+
+**Önemli notlar:**
+- GPRS/internet bağlantısı gerekmez, sadece GSM hattı yeterlidir
+- SMS gönderebilmek için SIM kartta SMS kredisi/yetkisi olmalıdır
+- [5. adımda] 30 sn içinde **kendi telefonunuzdan** Arduino'nun SIM kartına SMS gönderin → otomatik yakalanır
+
+```cpp
+#include "SIM800C.h"
+
+#define TEST_PHONE_NUMBER  "+905XXXXXXXXX"
+
+SIM800C gsm;
+
+void setup() {
+    Serial.begin(9600);
+    gsm.hardReset();                          // Modemi güçten geçir
+
+    gsm.smsSend("+905XXXXXXXXX", "Merhaba!"); // SMS gönder
+
+    String liste = gsm.smsList("ALL");        // Tüm SMS'leri listele
+    Serial.println(liste);
+
+    String mesaj = gsm.smsRead(1);            // 1. SMS'i oku
+    Serial.println(mesaj);
+
+    gsm.smsSetIncoming(true);                 // Gelen SMS bildirimi aç
+    String gelen = gsm.smsWaitIncoming(30000);// 30 sn bekle
+    Serial.println(gelen);
+
+    gsm.smsDeleteAll();                       // Tüm SMS'leri sil
+}
+```
+
+**SMS API Referansı:**
+
+| Fonksiyon | Açıklama |
+|:----------|:---------|
+| `smsSend(numara, mesaj)` | Belirtilen numaraya SMS gönderir |
+| `smsList("ALL")` | SIM karttaki tüm mesajları listeler (`"REC UNREAD"` ile sadece okunmamışlar) |
+| `smsRead(index)` | Belirtilen index'teki mesajı okur (index 1'den başlar) |
+| `smsDelete(index)` | Belirtilen index'teki tek mesajı siler |
+| `smsDeleteAll()` | SIM karttaki tüm mesajları siler |
+| `smsSetIncoming(true)` | Gelen SMS bildirimini (URC) açar |
+| `smsWaitIncoming(ms)` | Belirtilen süre boyunca gelen SMS'i bekler ve döndürür |
+
 ## ⚙️ APN Ayarları
 
 Her sketch'in başında APN ayarları bulunur:
@@ -181,7 +245,8 @@ arduino-uno-gsm-shield/
 │   ├── 02_HTTPTest/       # HTTP GET/POST testi
 │   ├── 03_TCPTest/        # TCP soket testi
 │   ├── 04_UDPTest/        # UDP testi
-│   └── 05_MQTTTest/       # MQTT publish/subscribe
+│   ├── 05_MQTTTest/       # MQTT publish/subscribe
+│   └── 06_SmsTest/        # SMS gönderme/alma/okuma/silme
 ├── library.properties     # Library Manager metadata
 ├── keywords.txt           # Syntax highlighting
 ├── README.md
@@ -194,4 +259,6 @@ MIT License — bkz. [LICENSE](LICENSE)
 
 ## 👨‍💻 Geliştirici
 
-**HiberSoft** — [github.com/hiberblsm](https://github.com/hiberblsm)
+**Hiber Bilişim** — [www.hiber.com.tr](https://www.hiber.com.tr)
+
+GitHub: [github.com/hiberblsm](https://github.com/hiberblsm)
