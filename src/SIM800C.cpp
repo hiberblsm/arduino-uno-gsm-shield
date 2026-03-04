@@ -748,6 +748,74 @@ bool SIM800C::mqttDisconnect() {
     return true;
 }
 
+// ==================== SMS ====================
+
+bool SIM800C::smsSend(const String &number, const String &message) {
+    sendAT("AT+CMGF=1");   // metin modu (begin() zaten ayarlar, güvenlik için tekrar)
+
+    String cmd = "AT+CMGS=\"";
+    cmd += number;
+    cmd += "\"";
+
+    String resp = sendAT(cmd, 5000);
+    if (resp.indexOf('>') < 0) {
+        debugPrint(F("SMS: > istemi gelmedi"));
+        return false;
+    }
+
+    _serial->print(message);
+    _serial->write(0x1A);  // Ctrl+Z - gönder
+
+    resp = waitForData("+CMGS:", 30000);
+    if (resp.indexOf("+CMGS:") >= 0) {
+        debugPrint(F("SMS gonderildi"));
+        return true;
+    }
+    debugPrint(F("SMS: gonderim hatasi"));
+    return false;
+}
+
+String SIM800C::smsRead(int index) {
+    sendAT("AT+CMGF=1");
+    String cmd = "AT+CMGR=";
+    cmd += index;
+    return sendAT(cmd, 5000);
+}
+
+bool SIM800C::smsDelete(int index) {
+    String cmd = "AT+CMGD=";
+    cmd += index;
+    cmd += ",0";
+    return sendATExpect(cmd, "OK", 5000);
+}
+
+bool SIM800C::smsDeleteAll() {
+    // AT+CMGD=1,4 → tüm mesajları sil
+    return sendATExpect("AT+CMGD=1,4", "OK", 15000);
+}
+
+String SIM800C::smsList(const String &status) {
+    sendAT("AT+CMGF=1");
+    String cmd = "AT+CMGL=\"";
+    cmd += status;
+    cmd += "\"";
+    return sendAT(cmd, 10000);
+}
+
+bool SIM800C::smsSetIncoming(bool enable) {
+    if (enable) {
+        // Mod 2: buffer'a ve seri porta yönlendir, +CMT: URC gönder
+        return sendATExpect("AT+CNMI=2,2,0,0,0", "OK", 3000);
+    } else {
+        return sendATExpect("AT+CNMI=0,0,0,0,0", "OK", 3000);
+    }
+}
+
+String SIM800C::smsWaitIncoming(uint32_t timeoutMs) {
+    debugPrint(F("SMS bekleniyor (+CMT:)..."));
+    return waitForData("+CMT:", timeoutMs);
+}
+
 // ==================== YARDIMCI ====================
 
 void SIM800C::debugPrint(const String &msg) {

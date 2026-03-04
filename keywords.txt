@@ -39,6 +39,13 @@ mqttSubscribe	KEYWORD2
 mqttLoop	KEYWORD2
 mqttPing	KEYWORD2
 mqttDisconnect	KEYWORD2
+smsSend	KEYWORD2
+smsRead	KEYWORD2
+smsDelete	KEYWORD2
+smsDeleteAll	KEYWORD2
+smsList	KEYWORD2
+smsSetIncoming	KEYWORD2
+smsWaitIncoming	KEYWORD2
 setDebug	KEYWORD2
 
 # Constants (LITERAL1)

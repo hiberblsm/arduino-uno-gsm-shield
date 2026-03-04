@@ -104,6 +104,15 @@ public:
     bool mqttPing();
     bool mqttDisconnect();
 
+    // SMS fonksiyonlar
+    bool   smsSend(const String &number, const String &message);
+    String smsRead(int index);                        // AT+CMGR - ham yanıt
+    bool   smsDelete(int index);                      // AT+CMGD=index,0
+    bool   smsDeleteAll();                            // AT+CMGD=1,4 (tümü)
+    String smsList(const String &status = "ALL");     // AT+CMGL
+    bool   smsSetIncoming(bool enable);               // AT+CNMI URC aç/kapat
+    String smsWaitIncoming(uint32_t timeoutMs = 30000); // +CMT: URC bekle
+
     // Yardımcı
     void debugPrint(const String &msg);
     void setDebug(bool enabled);
