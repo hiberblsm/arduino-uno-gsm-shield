@@ -848,6 +848,69 @@ String SIM800C::smsWaitIncoming(uint32_t timeoutMs) {
     return waitForData("+CMT:", timeoutMs);
 }
 
+bool SIM800C::smsPoll(char *sender, uint8_t senderLen, char *body, uint8_t bodyLen) {
+    // Statik 160 byte'lık sliding pencere — heap kullanmaz
+    static char buf[160];
+    static uint8_t pos = 0;
+    static bool init = false;
+    if (!init) { memset(buf, 0, sizeof(buf)); init = true; }
+
+    // Mevcut tüm byte'ları oku
+    while (_serial->available()) {
+        char c = _serial->read();
+        if (_debugEnabled) Serial.write(c);
+        if (pos >= (uint8_t)(sizeof(buf) - 1)) {
+            memmove(buf, buf + 80, sizeof(buf) - 80);
+            memset(buf + sizeof(buf) - 80, 0, 80);
+            pos = sizeof(buf) - 80;
+        }
+        buf[pos++] = c;
+        buf[pos]   = '\0';
+    }
+
+    // +CMT: ve iki satır sonu (header + gövde) geldi mi?
+    char *cmt = strstr(buf, "+CMT:");
+    if (!cmt) return false;
+    char *nl1 = strchr(cmt, '\n');
+    if (!nl1) return false;
+    char *nl2 = strchr(nl1 + 1, '\n');
+    if (!nl2) return false;
+
+    // Gönderen: +CMT: "+905XXX","",...  → ilk tırnak çifti
+    if (sender && senderLen > 0) {
+        sender[0] = '\0';
+        char *q1 = strchr(cmt, '"');
+        if (q1) {
+            char *q2 = strchr(q1 + 1, '"');
+            if (q2) {
+                uint8_t len = (uint8_t)(q2 - q1 - 1);
+                if (len >= senderLen) len = senderLen - 1;
+                memcpy(sender, q1 + 1, len);
+                sender[len] = '\0';
+            }
+        }
+    }
+
+    // Mesaj gövdesi: nl1+1 ile nl2 arası, baş/son boşluk temizlenmiş, büyük harf
+    if (body && bodyLen > 0) {
+        body[0] = '\0';
+        char *start = nl1 + 1;
+        if (*start == '\r') start++;
+        size_t len = (size_t)(nl2 - start);
+        while (len > 0 && (start[len-1] == '\r' || start[len-1] == '\n' || start[len-1] == ' ')) len--;
+        if (len >= bodyLen) len = bodyLen - 1;
+        memcpy(body, start, len);
+        body[len] = '\0';
+        for (size_t i = 0; i < len; i++)
+            body[i] = (char)toupper((unsigned char)body[i]);
+    }
+
+    // Buffer temizle
+    pos = 0;
+    memset(buf, 0, sizeof(buf));
+    return true;
+}
+
 // ==================== YARDIMCI ====================
 
 void SIM800C::debugPrint(const String &msg) {

@@ -112,6 +112,10 @@ public:
     String smsList(const String &status = "ALL");     // AT+CMGL
     bool   smsSetIncoming(bool enable);               // AT+CNMI URC aç/kapat
     String smsWaitIncoming(uint32_t timeoutMs = 30000); // +CMT: URC bekle
+    // Non-blocking SMS yoklayıcı — loop() için heap-free
+    // Gönderen numara ve mesaj gövdesini char[] tamponlara yazar
+    // Mesaj büyük harfe dönütürülür, return true = yeni SMS mevcut
+    bool   smsPoll(char *sender, uint8_t senderLen, char *body, uint8_t bodyLen);
 
     // Yardımcı
     void debugPrint(const String &msg);
