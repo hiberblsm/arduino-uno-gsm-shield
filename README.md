@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GSM](https://img.shields.io/badge/Module-SIM800C-green)](https://www.simcom.com/)
 
-Arduino UNO üzerinde SIM800C GSM modülü ile **Serial, HTTP, TCP, UDP, MQTT ve SMS** protokollerini test etmek için hazır kütüphane ve örnek sketch'ler.
+Arduino UNO üzerinde SIM800C GSM modülü ile **Serial, HTTP, TCP, UDP, MQTT, SMS ve DTMF** protokollerini test etmek için hazır kütüphane ve örnek sketch'ler.
 
 ## 📋 Özellikler
 
@@ -16,6 +16,8 @@ Arduino UNO üzerinde SIM800C GSM modülü ile **Serial, HTTP, TCP, UDP, MQTT ve
 - ✅ UDP veri gönderim/alım
 - ✅ MQTT publish / subscribe (raw TCP üzerinden)
 - ✅ SMS gönderme, alma, okuma, listeleme ve silme
+- ✅ DTMF ton ile gelen aramayı yanıtlama ve röle kontrolu
+- ✅ heap-free `smsPoll()` ve `callPoll()` — AVR RAM dostu non-blocking loop
 - ✅ Debug modu (Serial Monitor)
 
 ## 🔌 Pin Bağlantıları
@@ -211,6 +213,59 @@ void setup() {
 | `smsDeleteAll()` | SIM karttaki tüm mesajları siler |
 | `smsSetIncoming(true)` | Gelen SMS bildirimini (URC) açar |
 | `smsWaitIncoming(ms)` | Belirtilen süre boyunca gelen SMS'i bekler ve döndürür |
+| `smsPoll(sender, sLen, body, bLen)` | Non-blocking; yeni SMS varsa `true`, tüm tamponlara char[] yazar |
+
+### 07 - SMS Röle Kontroltü
+
+SIM kartın telefon numarasına SMS göndererek 4 kanallı röle shield'ini kontrol edebilirsiniz. Sketch sürekli çalışır, `loop()` içinde `smsPoll()` ile gelen mesajları bekler.
+
+```cpp
+#define TEST_PHONE_NUMBER  "+905XXXXXXXXX"  // <- sadece bu değişir
+#define YETKILI            "+905XXXXXXXXX"  // boş bırak = herkese açık
+```
+
+| SMS Komutu | İşlem |
+|---|---|
+| `R1 AC` | Röle 1 aç (Pin 4) |
+| `R1 KAPAT` | Röle 1 kapat |
+| `R2`–`R4` | Aynı, Pin 5–7 |
+| `HEPSI AC` | 4 röleyi birden aç |
+| `HEPSI KAPAT` | 4 röleyi birden kapat |
+| `DURUM` | Tüm röle durumunu SMS ile geri bildir |
+
+### 08 - DTMF Röle Kontrolü
+
+Arduino'nun SIM kartını arayıp telefon tuşlarına basarak röleleri kontrol edebilirsiniz. GPRS gerekmez.
+
+```cpp
+#define YETKILI  ""   // boş = herkesten arama kabul et
+                      // doluysa sadece o numaradan gelen arama yanıtlanır
+```
+
+| DTMF Tuşu | İşlem |
+|:---------:|:-----|
+| `1` | Röle 1 AÇ (Pin 4) |
+| `2` | Röle 1 KAPAT |
+| `3` | Röle 2 AÇ (Pin 5) |
+| `4` | Röle 2 KAPAT |
+| `5` | Röle 3 AÇ (Pin 6) |
+| `6` | Röle 3 KAPAT |
+| `7` | Röle 4 AÇ (Pin 7) |
+| `8` | Röle 4 KAPAT |
+| `*` | Hepsini AÇ |
+| `0` | Hepsini KAPAT |
+| `9` | Durumu Serial'e yazdır |
+| `#` | Aramayı kapat |
+
+**DTMF API Referansı:**
+
+| Fonksiyon | Açıklama |
+|:----------|:---------|
+| `callSetCLIP(true)` | Arayan numara bildirimini (AT+CLIP) açar |
+| `callSetDTMF(true)` | DTMF ton algılamayı (AT+DDET) açar |
+| `callAnswer()` | Gelen aramayı yanıtlar (ATA) |
+| `callHangup()` | Aramayı kapatır (ATH) |
+| `callPoll(event, eLen, detail, dLen)` | Non-blocking; `"RING"` / `"CLIP"` / `"DTMF"` / `"HANGUP"` döndürür |
 
 ## ⚙️ APN Ayarları
 
@@ -241,12 +296,14 @@ arduino-uno-gsm-shield/
 │   ├── SIM800C.h          # Kütüphane header
 │   └── SIM800C.cpp        # Kütüphane implementasyon
 ├── examples/
-│   ├── 01_SerialTest/     # AT komut testi
-│   ├── 02_HTTPTest/       # HTTP GET/POST testi
-│   ├── 03_TCPTest/        # TCP soket testi
-│   ├── 04_UDPTest/        # UDP testi
-│   ├── 05_MQTTTest/       # MQTT publish/subscribe
-│   └── 06_SmsTest/        # SMS gönderme/alma/okuma/silme
+│   ├── 01_SerialTest/          # AT komut testi
+│   ├── 02_HTTPTest/            # HTTP GET/POST testi
+│   ├── 03_TCPTest/             # TCP soket testi
+│   ├── 04_UDPTest/             # UDP testi
+│   ├── 05_MQTTTest/            # MQTT publish/subscribe
+│   ├── 06_SmsTest/             # SMS gönderme/alma/okuma/silme
+│   ├── 07_SmsRelayControl/     # SMS ile 4 kanal röle kontrolu
+│   └── 08_DtmfRelayControl/    # DTMF (arama) ile 4 kanal röle kontrolu
 ├── library.properties     # Library Manager metadata
 ├── keywords.txt           # Syntax highlighting
 ├── README.md
