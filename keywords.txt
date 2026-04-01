@@ -47,6 +47,11 @@ smsList	KEYWORD2
 smsSetIncoming	KEYWORD2
 smsWaitIncoming	KEYWORD2
 smsPoll	KEYWORD2
+callSetCLIP	KEYWORD2
+callSetDTMF	KEYWORD2
+callAnswer	KEYWORD2
+callHangup	KEYWORD2
+callPoll	KEYWORD2
 setDebug	KEYWORD2
 
 # Constants (LITERAL1)

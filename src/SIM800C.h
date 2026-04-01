@@ -117,6 +117,15 @@ public:
     // Mesaj büyük harfe dönütürülür, return true = yeni SMS mevcut
     bool   smsPoll(char *sender, uint8_t senderLen, char *body, uint8_t bodyLen);
 
+    // DTMF / Çağrı fonksiyonları
+    bool   callSetCLIP(bool enable);   // AT+CLIP — arayan numara bildirimi
+    bool   callSetDTMF(bool enable);   // AT+DDET — DTMF ton algılama
+    bool   callAnswer();               // ATA — gelen aramayı yanıtla
+    bool   callHangup();               // ATH — aramayı kapat
+    // Non-blocking URC yoklayıcı: event = "RING"/"CLIP"/"DTMF"/"HANGUP"
+    // detail: CLIP→arayan numara, DTMF→tek karakter (0-9 * # A-D)
+    bool   callPoll(char *event, uint8_t eventLen, char *detail, uint8_t detailLen);
+
     // Yardımcı
     void debugPrint(const String &msg);
     void setDebug(bool enabled);

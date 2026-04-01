@@ -752,6 +752,109 @@ bool SIM800C::mqttDisconnect() {
     return true;
 }
 
+// ==================== DTMF / ÇAĞRI ====================
+
+bool SIM800C::callSetCLIP(bool enable) {
+    return sendATExpect(enable ? "AT+CLIP=1" : "AT+CLIP=0", "OK", 3000);
+}
+
+bool SIM800C::callSetDTMF(bool enable) {
+    // AT+DDET=1,0,0,0 — DTMF algılama + tonu seri porta yansıt
+    return sendATExpect(enable ? "AT+DDET=1,0,0,0" : "AT+DDET=0", "OK", 3000);
+}
+
+bool SIM800C::callAnswer() {
+    clearBuffer();
+    _serial->println("ATA");
+    delay(700);   // ses kanalı kurulana kadar bekle
+    clearBuffer();
+    debugPrint(F("Arama yanitlandi"));
+    return true;
+}
+
+bool SIM800C::callHangup() {
+    bool ok = sendATExpect("ATH", "OK", 3000);
+    debugPrint(F("Arama kapatildi"));
+    return ok;
+}
+
+bool SIM800C::callPoll(char *event, uint8_t eventLen, char *detail, uint8_t detailLen) {
+    static char buf[128];
+    static uint8_t pos = 0;
+    static bool init = false;
+    if (!init) { memset(buf, 0, sizeof(buf)); init = true; }
+
+    // Yeni byte'ları oku
+    while (_serial->available()) {
+        char c = _serial->read();
+        if (_debugEnabled) Serial.write(c);
+        if (pos >= (uint8_t)(sizeof(buf) - 1)) {
+            memmove(buf, buf + 64, sizeof(buf) - 64);
+            memset(buf + sizeof(buf) - 64, 0, 64);
+            pos = (uint8_t)(sizeof(buf) - 64);
+        }
+        buf[pos++] = c;
+        buf[pos]   = '\0';
+    }
+
+    if (event  && eventLen  > 0) event[0]  = '\0';
+    if (detail && detailLen > 0) detail[0] = '\0';
+
+    char *p;
+
+    // +DTMF: X — en öncelikli, çağrı sırasında gelir
+    p = strstr(buf, "+DTMF:");
+    if (p && strchr(p, '\n')) {
+        if (event  && eventLen  > 1) { strncpy(event, "DTMF", eventLen-1); event[eventLen-1]='\0'; }
+        if (detail && detailLen > 1) {
+            char *s = p + 6;
+            while (*s == ' ') s++;
+            if (*s && *s != '\r' && *s != '\n') { detail[0] = *s; detail[1] = '\0'; }
+        }
+        pos = 0; memset(buf, 0, sizeof(buf));
+        return true;
+    }
+
+    // +CLIP: arayan numarası
+    p = strstr(buf, "+CLIP:");
+    if (p && strchr(p, '\n')) {
+        if (event && eventLen > 1) { strncpy(event, "CLIP", eventLen-1); event[eventLen-1]='\0'; }
+        if (detail && detailLen > 1) {
+            char *q1 = strchr(p, '"');
+            if (q1) {
+                char *q2 = strchr(q1+1, '"');
+                if (q2) {
+                    uint8_t len = (uint8_t)(q2 - q1 - 1);
+                    if (len >= detailLen) len = detailLen - 1;
+                    memcpy(detail, q1+1, len);
+                    detail[len] = '\0';
+                }
+            }
+        }
+        pos = 0; memset(buf, 0, sizeof(buf));
+        return true;
+    }
+
+    // RING
+    p = strstr(buf, "RING");
+    if (p) {
+        if (event && eventLen > 1) { strncpy(event, "RING", eventLen-1); event[eventLen-1]='\0'; }
+        // Sadece ilk RING'i çıkar, kalanı tut (çünkü CLIP hemen arkasından gelebilir)
+        memmove(p, p + 4, strlen(p + 4) + 1);
+        if (pos >= 4) pos -= 4; else pos = 0;
+        return true;
+    }
+
+    // NO CARRIER veya BUSY — bağlantı kesildi
+    if (strstr(buf, "NO CARRIER") || strstr(buf, "BUSY")) {
+        if (event && eventLen > 1) { strncpy(event, "HANGUP", eventLen-1); event[eventLen-1]='\0'; }
+        pos = 0; memset(buf, 0, sizeof(buf));
+        return true;
+    }
+
+    return false;
+}
+
 // ==================== SMS ====================
 
 // Heap-free sliding window tarayıcı
