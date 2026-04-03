@@ -17,6 +17,7 @@ Arduino UNO üzerinde SIM800C GSM modülü ile **Serial, HTTP, TCP, UDP, MQTT, S
 - ✅ MQTT publish / subscribe (raw TCP üzerinden)
 - ✅ SMS gönderme, alma, okuma, listeleme ve silme
 - ✅ DTMF ton ile gelen aramayı yanıtlama ve röle kontrolu
+- ✅ DS18B20 sıcaklık sensörü ile SMS üzerinden uzaktan sıcaklık sorgulama
 - ✅ heap-free `smsPoll()` ve `callPoll()` — AVR RAM dostu non-blocking loop
 - ✅ Debug modu (Serial Monitor)
 
@@ -267,6 +268,37 @@ Arduino'nun SIM kartını arayıp telefon tuşlarına basarak röleleri kontrol 
 | `callHangup()` | Aramayı kapatır (ATH) |
 | `callPoll(event, eLen, detail, dLen)` | Non-blocking; `"RING"` / `"CLIP"` / `"DTMF"` / `"HANGUP"` döndürür |
 
+### 09 - SMS Sıcaklık Ölçümü
+
+DS18B20 sensörü (Pin 10) ile anlık sıcaklığı okur. Numaranızdan `SICAKLIK` veya `DURUM` SMS'i gönderdiğinizde Arduino anında ölçüm yapıp SMS ile geri bildirir. GPRS gerekmez.
+
+**Gerekli kütüphaneler:**
+```bash
+arduino-cli lib install "OneWire" "DallasTemperature"
+```
+
+**Donanım bağlantısı:**
+
+| Arduino UNO | DS18B20 | Açıklama |
+|:-----------:|:-------:|:---------|
+| Pin 10      | Data    | 1-Wire veri hattı |
+| 5V          | VCC     | Güç |
+| GND         | GND     | Toprak |
+| 5V ↔ Pin10  | —       | 4.7kΩ pull-up direnci (**zorunlu**) |
+
+```cpp
+#define DS18B20_PIN  10
+#define YETKILI      ""   // boş = herkese açık, doluysa sadece o numaradan SMS kabul et
+```
+
+| SMS Komutu | Cevap |
+|:----------:|:------|
+| `SICAKLIK` | `Sicaklik: 23.5 C` |
+| `DURUM`    | `Sicaklik: 23.5 C\nSinyal: 29` |
+| (diğer)    | Aynı sıcaklık cevabı |
+
+> Sensör bağlı değilse `"Sensor bulunamadi"` SMS'i gönderilir.
+
 ## ⚙️ APN Ayarları
 
 Her sketch'in başında APN ayarları bulunur:
@@ -303,7 +335,8 @@ arduino-uno-gsm-shield/
 │   ├── 05_MQTTTest/            # MQTT publish/subscribe
 │   ├── 06_SmsTest/             # SMS gönderme/alma/okuma/silme
 │   ├── 07_SmsRelayControl/     # SMS ile 4 kanal röle kontrolu
-│   └── 08_DtmfRelayControl/    # DTMF (arama) ile 4 kanal röle kontrolu
+│   ├── 08_DtmfRelayControl/    # DTMF (arama) ile 4 kanal röle kontrolu
+│   └── 09_SmsTemperature/      # DS18B20 sıcaklık sensörü, SMS ile uzaktan sorgulama
 ├── library.properties     # Library Manager metadata
 ├── keywords.txt           # Syntax highlighting
 ├── README.md
