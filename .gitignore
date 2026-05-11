@@ -17,3 +17,9 @@ Thumbs.db
 # IDE
 *.code-workspace
 .idea/
+
+# arduino-cli binary
+bin/
+
+# Build artifacts
+examples/*/build/
