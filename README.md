@@ -31,7 +31,9 @@ Arduino UNO üzerinde SIM800C GSM modülü ile **Serial, HTTP, TCP, UDP, MQTT, S
 | 5V          | VCC     | Güç (2A adaptör önerilir) |
 | GND         | GND     | Toprak |
 
-> ⚠️ **Önemli**: SIM800C modülü yoğun akım çeker (2A pik). Arduino USB gücü yeterli olmayabilir. Harici 5V/2A güç kaynağı kullanın.
+> ⚠️ **Önemli**: GSM Shield, beslemesini doğrudan Arduino UNO üzerinden alır. SIM800C modülü yoğun akım çeker (2A pik). Arduino USB girişi bu akımı karşılayamaz.
+> Arduino UNO'nun **Barrel Jack** (DC girişi) veya **VIN** pinine **5V–12V / 2A veya üstü** harici güç kaynağı bağlayın.
+> Yetersiz besleme; modemi açmama, bağlantı kopması veya anlık resetlenme gibi sorunlara yol açar.
 
 ## 📦 Kurulum
 
